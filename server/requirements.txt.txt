@@ -1,0 +1,11 @@
+fastapi
+
+uvicorn
+
+yfinance
+
+pandas
+
+scikit-learn
+
+python-multipart

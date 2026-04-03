@@ -1,0 +1,27 @@
+# ══════════════════════════════════════════════════════════
+#  MarketMind AI v2.0  —  Backend Dependencies
+#  Install:  pip install -r requirements.txt
+# ══════════════════════════════════════════════════════════
+
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1          # ASGI server with WebSocket support
+
+# Data & finance
+yfinance==0.2.50                   # Yahoo Finance data
+pandas==2.2.3
+numpy==1.26.4
+
+# Async HTTP (AMFI scraper + yfinance internals)
+httpx==0.28.0
+
+# Background scheduler (cache warmer)
+APScheduler==3.10.4
+
+# Pydantic (FastAPI uses this for request/response models)
+pydantic==2.10.3
+
+# ── Optional: swap the placeholder forecast with a real model ──────────────
+# scikit-learn==1.5.2              # Random Forest / LinearRegression
+# tensorflow==2.17.0               # LSTM via Keras
+# torch==2.4.0                     # PyTorch LSTM
