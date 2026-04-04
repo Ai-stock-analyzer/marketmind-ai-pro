@@ -1,0 +1,274 @@
+/*
+ * SplashScreen.css — MarketMind·AI
+ * Cinematic splash screen styles.
+ * Import this in your SplashScreen.jsx or main entry point.
+ *
+ * Usage:  import './SplashScreen.css';
+ */
+
+/* ── FONT IMPORT ─────────────────────────────────────────────────────────────
+   JetBrains Mono gives the trading-terminal monospaced aesthetic.
+   Rajdhani adds a bold, futuristic display weight for the wordmark.
+*/
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap');
+
+/* ── CSS CUSTOM PROPERTIES ──────────────────────────────────────────────────*/
+:root {
+  --splash-bg:          #060d1a;
+  --splash-cyan:        #06b6d4;
+  --splash-indigo:      #6366f1;
+  --splash-silver:      #e2e8f0;
+  --splash-silver-mid:  #94a3b8;
+  --splash-silver-dim:  #64748b;
+  --splash-glow:        #f1f5f9;
+}
+
+/* ── ROOT SPLASH WRAPPER ────────────────────────────────────────────────────*/
+.splash-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, #080f20 0%, #030912 100%);
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Courier New', monospace;
+  /* Grain texture overlay for cinematic feel */
+  isolation: isolate;
+}
+
+.splash-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.022;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── SVG LOGO ────────────────────────────────────────────────────────────────
+   The SVG path draw uses stroke-dashoffset.
+   Framer Motion drives the actual animation values,
+   but these classes provide the neon glow state.
+*/
+.splash-logo-svg {
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+
+/* Neon silver glow — applied to circle & M path in "glowing" phase */
+.splash-stroke-glow {
+  filter:
+    drop-shadow(0 0  2px var(--splash-glow))
+    drop-shadow(0 0  8px var(--splash-cyan))
+    drop-shadow(0 0 20px var(--splash-cyan))
+    drop-shadow(0 0 40px var(--splash-indigo));
+}
+
+/* ── WORDMARK ────────────────────────────────────────────────────────────────*/
+.splash-wordmark {
+  font-family: 'Rajdhani', 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: clamp(22px, 4vw, 32px);
+  letter-spacing: 0.22em;
+  color: var(--splash-silver);
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.splash-wordmark .accent {
+  color: var(--splash-cyan);
+}
+
+/* Neon text glow — applied after draw completes */
+.splash-wordmark-glow {
+  text-shadow:
+    0 0  4px var(--splash-glow),
+    0 0 12px var(--splash-cyan),
+    0 0 30px var(--splash-cyan),
+    0 0 60px var(--splash-indigo);
+}
+
+/* ── TAGLINE ──────────────────────────────────────────────────────────────────*/
+.splash-tagline {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: var(--splash-silver-dim);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* ── LOADING BAR ─────────────────────────────────────────────────────────────*/
+.splash-bar-track {
+  width: 220px;
+  height: 2px;
+  background: rgba(6, 182, 212, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.splash-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--splash-cyan), var(--splash-glow), var(--splash-indigo));
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--splash-cyan);
+  animation: barFill var(--bar-duration, 1.2s) linear forwards;
+  transform-origin: left;
+}
+
+@keyframes barFill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* ── PULSE RING — radiates outward from logo centre ─────────────────────────*/
+.splash-pulse-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid var(--splash-cyan);
+  animation: pulseRing 2.2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulseRing {
+  0%   { width: 120px; height: 120px; opacity: 0.55; margin: -60px 0 0 -60px; }
+  100% { width: 340px; height: 340px; opacity: 0;    margin: -170px 0 0 -170px; }
+}
+
+.splash-pulse-ring:nth-child(2) { animation-delay: 0.7s; }
+.splash-pulse-ring:nth-child(3) { animation-delay: 1.4s; }
+
+/* ── SCANLINE SWEEP ──────────────────────────────────────────────────────────
+   A single highlight line that passes over the logo once, like a scanner.
+*/
+.splash-scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--splash-cyan) 40%,
+    var(--splash-glow) 50%,
+    var(--splash-cyan) 60%,
+    transparent 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  animation: scanSweep 0.9s ease-in-out forwards;
+  animation-delay: var(--scan-delay, 1.8s);
+}
+
+@keyframes scanSweep {
+  0%   { top: 5%;  opacity: 0;   }
+  15%  { opacity: 0.8; }
+  85%  { opacity: 0.4; }
+  100% { top: 95%; opacity: 0;   }
+}
+
+/* ── CORNER BRACKETS ─────────────────────────────────────────────────────────*/
+.splash-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  animation: cornerFadeIn 0.4s ease-out forwards;
+}
+.splash-corner.tl { top: 20px;    left: 20px;    border-top:  1px solid rgba(6,182,212,.45); border-left:  1px solid rgba(6,182,212,.45); }
+.splash-corner.tr { top: 20px;    right: 20px;   border-top:  1px solid rgba(6,182,212,.45); border-right: 1px solid rgba(6,182,212,.45); }
+.splash-corner.bl { bottom: 20px; left: 20px;    border-bottom: 1px solid rgba(6,182,212,.45); border-left:  1px solid rgba(6,182,212,.45); }
+.splash-corner.br { bottom: 20px; right: 20px;   border-bottom: 1px solid rgba(6,182,212,.45); border-right: 1px solid rgba(6,182,212,.45); }
+.splash-corner.tl { animation-delay: 0.20s; }
+.splash-corner.tr { animation-delay: 0.28s; }
+.splash-corner.bl { animation-delay: 0.36s; }
+.splash-corner.br { animation-delay: 0.44s; }
+
+@keyframes cornerFadeIn {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1);   }
+}
+
+/* ── DATA TICKER ──────────────────────────────────────────────────────────────*/
+.splash-ticker-wrap {
+  position: absolute;
+  bottom: 32px;
+  left: 0; right: 0;
+  height: 22px;
+  overflow: hidden;
+  border-top:    1px solid rgba(6,182,212,.1);
+  border-bottom: 1px solid rgba(6,182,212,.1);
+  background: linear-gradient(
+    90deg,
+    var(--splash-bg) 0%,
+    transparent 8%,
+    transparent 92%,
+    var(--splash-bg) 100%
+  );
+}
+
+.splash-ticker-inner {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 9px;
+  color: var(--splash-silver-dim);
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  height: 100%;
+  animation: tickerScroll 28s linear infinite;
+}
+
+@keyframes tickerScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.splash-ticker-bull { color: #10b981; }
+.splash-ticker-bear { color: #ef4444; }
+.splash-ticker-dot  { color: rgba(6,182,212,.3); margin: 0 24px; }
+
+/* ── PARTICLE ─────────────────────────────────────────────────────────────────*/
+.splash-particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: particlePulse var(--dur, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes particlePulse {
+  0%, 100% { opacity: 0;   transform: scale(0);   }
+  25%       { opacity: 0.8; transform: scale(1);   }
+  50%       { opacity: 0.3; transform: scale(0.7); }
+  75%       { opacity: 0.9; transform: scale(1.2); }
+}
+
+/* ── EXIT TRANSITIONS ────────────────────────────────────────────────────────
+   Framer Motion drives the main exit, but CSS fallback below.
+*/
+.splash-exit {
+  animation: splashExit 0.9s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes splashExit {
+  0%   { opacity: 1; transform: scale(1);    filter: blur(0px);  }
+  100% { opacity: 0; transform: scale(0.88); filter: blur(8px);  }
+}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────────────────────*/
+@media (max-width: 480px) {
+  .splash-wordmark { font-size: 20px; letter-spacing: 0.14em; }
+  .splash-bar-track { width: 160px; }
+}

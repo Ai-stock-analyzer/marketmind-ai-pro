@@ -1,4 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
+
+// ── THEME CONTEXT ──────────────────────────────────────────────────────────────
+export const ThemeContext = createContext({ isDark: true, toggleTheme: () => {} });
+export const useTheme = () => useContext(ThemeContext);
 import {
   ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Line, BarChart, Bar, Cell, ReferenceLine, Area
@@ -21,8 +25,9 @@ import {
 import CommunityPanel from "./CommunityPanel";
 import StrategyBacktester from "./StrategyBacktester";
 import PriceAlertSystem, { usePriceAlerts } from "./PriceAlertSystem";
+import StrategyBuilder from "./StrategyBuilder";
 // ── DESIGN TOKENS ─────────────────────────────────────────────────────────────
-const T = {
+const DARK_T = {
   bg:"#0f172a", surface:"#111827", panel:"#1a2235", card:"#1e2d45",
   border:"#243044", border2:"#2d3f5f", text:"#f1f5f9", sub:"#94a3b8", muted:"#4b6080", dim:"#1e2d3d",
   cyan:"#06b6d4", blue:"#3b82f6", indigo:"#6366f1", violet:"#8b5cf6",
@@ -30,6 +35,19 @@ const T = {
   amber:"#f59e0b", orange:"#f97316", yellow:"#eab308",
   sky:"#38bdf8", purple:"#a78bfa", teal:"#14b8a6",
 };
+
+const LIGHT_T = {
+  bg:"#f1f5f9", surface:"#ffffff", panel:"#f8fafc", card:"#ffffff",
+  border:"#e2e8f0", border2:"#cbd5e1", text:"#0f172a", sub:"#475569", muted:"#94a3b8", dim:"#e8f0f8",
+  cyan:"#0891b2", blue:"#2563eb", indigo:"#4f46e5", violet:"#7c3aed",
+  emerald:"#059669", green:"#16a34a", red:"#dc2626", rose:"#e11d48",
+  amber:"#d97706", orange:"#ea580c", yellow:"#ca8a04",
+  sky:"#0284c7", purple:"#7c3aed", teal:"#0d9488",
+};
+
+// T is set at render time via context; components that need it use getT()
+let T = DARK_T;
+const getT = () => T;
 
 // ── GROWW-INSPIRED ACCENT TOKENS ──────────────────────────────────────────────
 const G = {
@@ -285,36 +303,48 @@ function genShadow(candles,stock){
 }
 
 // ── PRIMITIVES ────────────────────────────────────────────────────────────────
-const Card=({children,style})=>(
-  <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:12,padding:"14px 16px",...style}}>
-    {children}
-  </div>
-);
+const Card=({children,style})=>{
+  const T=getT();
+  return <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:12,padding:"14px 16px",...style}}>{children}</div>;
+};
 
-const SH=({icon:Icon,title,right,color=T.cyan})=>(
-  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:11}}>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>
-      {Icon&&<Icon size={13} color={color} strokeWidth={2.5}/>}
-      <span style={{fontSize:9.5,fontWeight:900,color,letterSpacing:"0.12em",textTransform:"uppercase"}}>{title}</span>
+const SH=({icon:Icon,title,right,color})=>{
+  const T=getT();
+  const c=color||T.cyan;
+  return(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:11}}>
+      <div style={{display:"flex",alignItems:"center",gap:6}}>
+        {Icon&&<Icon size={13} color={c} strokeWidth={2.5}/>}
+        <span style={{fontSize:9.5,fontWeight:900,color:c,letterSpacing:"0.12em",textTransform:"uppercase"}}>{title}</span>
+      </div>
+      {right}
     </div>
-    {right}
-  </div>
-);
+  );
+};
 
-const Badge=({children,color=T.cyan,style})=>(
-  <span style={{fontSize:8.5,fontWeight:800,padding:"2px 8px",borderRadius:5,
-    background:color+"22",color,border:`1px solid ${color}44`,letterSpacing:"0.04em",...style}}>
-    {children}
-  </span>
-);
+const Badge=({children,color,style})=>{
+  const T=getT();
+  const c=color||T.cyan;
+  return(
+    <span style={{fontSize:8.5,fontWeight:800,padding:"2px 8px",borderRadius:5,
+      background:c+"22",color:c,border:`1px solid ${c}44`,letterSpacing:"0.04em",...style}}>
+      {children}
+    </span>
+  );
+};
 
-const MiniBar=({value,max=100,color=T.cyan,height=5})=>(
-  <div style={{width:"100%",height,background:T.border,borderRadius:3,overflow:"hidden"}}>
-    <div style={{height,width:`${(value/max)*100}%`,background:color,borderRadius:3,transition:"width 0.8s"}}/>
-  </div>
-);
+const MiniBar=({value,max=100,color,height=5})=>{
+  const T=getT();
+  const c=color||T.cyan;
+  return(
+    <div style={{width:"100%",height,background:T.border,borderRadius:3,overflow:"hidden"}}>
+      <div style={{height,width:`${(value/max)*100}%`,background:c,borderRadius:3,transition:"width 0.8s"}}/>
+    </div>
+  );
+};
 
 function ArcGauge({value,label,size=80}){
+  const T = getT();
   const r=size*0.36,cx=size/2,cy=size*0.58;
   const toR=d=>d*Math.PI/180;
   const sA=-210,eA=30,span=eA-sA;
@@ -339,6 +369,7 @@ function ArcGauge({value,label,size=80}){
 }
 
 function CircleGauge({value,size=60,label}){
+  const T = getT();
   const r=22,cx=30,cy=30,circ=2*Math.PI*r;
   const pct=clamp(value/100,0,1);
   const color=value>=70?T.emerald:value>=45?T.amber:T.red;
@@ -357,9 +388,10 @@ function CircleGauge({value,size=60,label}){
 }
 
 function TickerTape({tickers}){
+  const T = getT();
   const d=[...tickers,...tickers];
   return(
-    <div style={{background:"#070d1a",height:28,overflow:"hidden",display:"flex",alignItems:"center",borderBottom:`1px solid ${T.border}`}}>
+    <div style={{background:T.dim,height:28,overflow:"hidden",display:"flex",alignItems:"center",borderBottom:`1px solid ${T.border}`}}>
       <div style={{display:"flex",gap:30,whiteSpace:"nowrap",animation:"ticker 32s linear infinite",paddingLeft:20}}>
         {d.map((t,i)=>(
           <span key={i} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:10}}>
@@ -377,26 +409,21 @@ function TickerTape({tickers}){
 }
 
 // ── TRADINGVIEW-STYLE CANVAS CHART ────────────────────────────────────────────
-const TV = {
-  bg:       "#131722",   // deep charcoal TradingView bg
-  grid:     "#1e222d",   // subtle grid lines
-  border:   "#2a2e39",
-  text:     "#d1d4dc",
-  muted:    "#5d606b",
-  bull:     "#26a69a",   // TradingView neon teal-green bullish
-  bullGlow: "#00ff88",   // bright neon green for body fill
-  bear:     "#ef5350",   // electric red bearish
-  bearGlow: "#ff1744",   // vivid red body fill
-  volume:   "#363a45",
-  rsiLine:  "#f59e0b",   // amber RSI line
-  rsiOB:    "#ef535055", // overbought band
-  rsiOS:    "#26a69a55", // oversold band
-  pred:     "#818cf8",   // indigo prediction
-  predBand: "#6366f122",
-  crosshair:"#758696",
-  sma20:    "#f59e0b",
-  sma9:     "#22d3ee",
+const TV_DARK = {
+  bg:"#131722", grid:"#1e222d", border:"#2a2e39", text:"#d1d4dc", muted:"#5d606b",
+  bull:"#26a69a", bullGlow:"#00ff88", bear:"#ef5350", bearGlow:"#ff1744",
+  volume:"#363a45", rsiLine:"#f59e0b", rsiOB:"#ef535055", rsiOS:"#26a69a55",
+  pred:"#818cf8", predBand:"#6366f122", crosshair:"#758696",
+  sma20:"#f59e0b", sma9:"#22d3ee",
 };
+const TV_LIGHT = {
+  bg:"#ffffff", grid:"#e8ecf2", border:"#d1d9e6", text:"#1e293b", muted:"#94a3b8",
+  bull:"#059669", bullGlow:"#10b981", bear:"#dc2626", bearGlow:"#ef4444",
+  volume:"#cbd5e1", rsiLine:"#d97706", rsiOB:"#dc262633", rsiOS:"#05966933",
+  pred:"#4f46e5", predBand:"#4f46e522", crosshair:"#64748b",
+  sma20:"#d97706", sma9:"#0891b2",
+};
+let TV = TV_DARK;
 
 function computeRSI(closes, period=14){
   const rsi=[];
@@ -419,7 +446,7 @@ function computeSMA(closes, period){
   );
 }
 
-function ShadowChart({candles, shadow}){
+function ShadowChart({candles, shadow, isDark}){
   const canvasRef = useCallback(node=>{
     if(!node) return;
     drawChart(node, candles, shadow);
@@ -429,10 +456,10 @@ function ShadowChart({candles, shadow}){
   const containerRef      = useRef(null);
   const canvasElRef       = useRef(null);
 
-  // redraw whenever candles/shadow change
+  // redraw whenever candles/shadow/theme change
   useEffect(()=>{
     if(canvasElRef.current) drawChart(canvasElRef.current, candles, shadow, mouse);
-  },[candles, shadow, mouse]);
+  },[candles, shadow, mouse, isDark]);
 
   function drawChart(canvas, candles, shadow, mouse=null){
     const DPR  = window.devicePixelRatio||1;
@@ -745,6 +772,7 @@ function ShadowChart({candles, shadow}){
 
 // ── FEATURE IMPORTANCE ────────────────────────────────────────────────────────
 function FeatureChart({data}){
+  const T = getT();
   const items=Object.entries(data).map(([k,v])=>({f:k,v})).sort((a,b)=>b.v-a.v);
   const colors={RSI:T.cyan,Sentiment:T.violet,SMA:T.emerald,MACD:T.amber,Volume:T.sky};
   return(
@@ -764,6 +792,7 @@ function FeatureChart({data}){
 
 // ── HOLLY CARD ────────────────────────────────────────────────────────────────
 function HollyCard({pick,riskMode,tickers,onSelect}){
+  const T=getT();
   const tick=tickers.find(t=>t.sym===pick.sym);
   const price=tick?.price??pick.entry;
   const isAgg=riskMode==="aggressive";
@@ -776,7 +805,7 @@ function HollyCard({pick,riskMode,tickers,onSelect}){
     <div onClick={()=>onSelect(pick.sym)}
       style={{background:T.panel,border:`1px solid ${T.border2}`,borderRadius:10,padding:"12px 14px",
         cursor:"pointer",transition:"all 0.18s",position:"relative",overflow:"hidden"}}
-      onMouseEnter={e=>{e.currentTarget.style.borderColor=isBuy?T.emerald:T.red;e.currentTarget.style.background="#1c2d42";}}
+      onMouseEnter={e=>{e.currentTarget.style.borderColor=isBuy?T.emerald:T.red;e.currentTarget.style.background=T.card;}}
       onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border2;e.currentTarget.style.background=T.panel;}}>
       <div style={{position:"absolute",top:0,left:0,width:3,height:"100%",
         background:isBuy?"linear-gradient(#10b981,#059669)":"linear-gradient(#ef4444,#b91c1c)",borderRadius:"10px 0 0 10px"}}/>
@@ -823,6 +852,7 @@ function HollyCard({pick,riskMode,tickers,onSelect}){
 
 // ── FORENSIC PANEL ────────────────────────────────────────────────────────────
 function ForensicPanel({stock}){
+  const T=getT();
   const flags=[
     {label:"Pledged Shares",value:`${stock.pledged.toFixed(1)}%`,flag:stock.pledged>5,critical:stock.pledged>15,
      detail:stock.pledged>15?"CRITICAL: Forced selling risk":stock.pledged>5?"WARNING: Margin call risk":"Clean promoter structure"},
@@ -858,6 +888,7 @@ function ForensicPanel({stock}){
 
 // ── DVM SCORECARD ──────────────────────────────────────────────────────────────
 function DVMScorecard({stock,sc}){
+  const T=getT();
   const dur=Math.round(sc.quality),val=Math.round(sc.valuation),mom=Math.round(sc.momentum);
   const[d,v,m]=stock.dvm;
   const overall=Math.round((dur+val+mom)/3);
@@ -890,6 +921,7 @@ function DVMScorecard({stock,sc}){
 
 // ── PROS & CONS ───────────────────────────────────────────────────────────────
 function ProsCons({stock}){
+  const T=getT();
   return(
     <Card>
       <SH icon={Brain} title="AI Pros & Cons"/>
@@ -913,6 +945,7 @@ function ProsCons({stock}){
 
 // ── PEER TABLE ────────────────────────────────────────────────────────────────
 function PeerTable({sym,stock}){
+  const T=getT();
   const peers=PEERS[sym]||[];
   const all=[{sym,pe:stock.pe,mcap:stock.mcap,div:stock.divYield,roe:stock.roe[2],isCurrent:true},...peers.map(p=>({...p,isCurrent:false}))];
   return(
@@ -1007,6 +1040,7 @@ const NIFTY50_BASE = [
 
 // ── HEATMAP COMPONENT ─────────────────────────────────────────────────────────
 function MarketHeatmap() {
+  const T=getT();
   const [stocks, setStocks] = useState(() =>
     NIFTY50_BASE.map(s => ({ ...s }))
   );
@@ -1166,7 +1200,7 @@ function MarketHeatmap() {
       <div ref={containerRef} style={{ position:"relative" }}>
         <div style={{
           display:"flex", flexWrap:"wrap", gap:4, padding:12,
-          borderRadius:14, background:"#060d1a", border:`1px solid ${T.border}`,
+          borderRadius:14, background: T.dim, border:`1px solid ${T.border}`,
           minHeight:400,
         }}>
           {sorted.map(stock => {
@@ -1323,7 +1357,282 @@ function MarketHeatmap() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // APP
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// SPLASH SCREEN — pure React + CSS (no external dependencies)
+// ═══════════════════════════════════════════════════════════════════
+
+const SPLASH_COL = {
+  bg:"#060d1a", bgGrad1:"#080f20", bgGrad2:"#030912",
+  stroke:"#e2e8f0", glowCore:"#f1f5f9", glowMid:"#94a3b8",
+  accentCyan:"#06b6d4", accentIndigo:"#6366f1",
+  text:"#f1f5f9", sub:"#64748b", gridLine:"#0d1a2e",
+};
+const S_DRAW_START = 200;
+const S_DRAW_DUR   = 1600;
+const S_GLOW_START = 1700;
+const S_TEXT_START = 2000;
+const S_TAGLINE    = 2550;
+const S_HOLD       = 3400;
+const S_EXIT_DUR   = 900;
+const LOGO_M_PATH  = "M 28 86 L 28 34 L 60 62 L 92 34 L 92 86";
+const M_PATH_LEN   = 192;
+const S_CIRCLE_R   = 50;
+const S_CIRC       = +(2*Math.PI*S_CIRCLE_R).toFixed(2);
+const SPLASH_TICKER_DATA = [
+  "RELIANCE  ₹2,847  +1.1%","HDFCBANK  ₹1,623  +0.8%","TCS  ₹3,412  −0.4%",
+  "NIFTY 50  24,346  +0.6%","SENSEX  80,182  +0.5%","BAJFINANCE  ₹6,920  +2.1%",
+  "INFY  ₹1,587  +1.8%","SBIN  ₹812  +2.4%","USD/INR  83.42  +0.1%","GOLD  ₹72,840  +0.3%",
+];
+const SPLASH_PX = Array.from({length:20},(_,i)=>({
+  id:i, left:`${5+(i*37.3)%90}%`, top:`${8+(i*53.7)%84}%`,
+  size:i%4===0?3:2,
+  color:i%3===0?"#06b6d4":i%5===0?"#6366f1":"#94a3b8",
+  delay:`${(i*0.18)%2.4}s`, dur:`${2.8+(i%5)*0.4}s`,
+}));
+
+const SPLASH_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;900&display=swap');
+  @keyframes spFadeIn    {from{opacity:0;transform:scale(0.93)}to{opacity:1;transform:scale(1)}}
+  @keyframes spExit      {from{opacity:1;transform:scale(1);filter:blur(0px)}to{opacity:0;transform:scale(0.88);filter:blur(8px)}}
+  @keyframes spGlowPulse {0%,100%{opacity:0.5;transform:scale(1)}50%{opacity:0.9;transform:scale(1.08)}}
+  @keyframes spLogoIn    {from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
+  @keyframes spLetterIn  {from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spFadeUp    {from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spTicker    {from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes spParticle  {0%,100%{opacity:0;transform:scale(0)}25%{opacity:0.8;transform:scale(1)}50%{opacity:0.3;transform:scale(0.7)}75%{opacity:0.9;transform:scale(1.2)}}
+  @keyframes spBarFill   {from{width:0%}to{width:100%}}
+  @keyframes spCorner    {from{opacity:0;transform:scale(0.4)}to{opacity:1;transform:scale(1)}}
+  @keyframes spCentre    {0%{opacity:0;transform:translate(-50%,-50%) scale(0)}40%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}70%{opacity:0.7;transform:translate(-50%,-50%) scale(1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}}
+  @keyframes spHalo      {0%,100%{opacity:0.5;transform:scale(0.95)}50%{opacity:0.85;transform:scale(1.1)}}
+  @keyframes spGridIn    {from{opacity:0}to{opacity:1}}
+  .sp-circle{stroke-dasharray:${S_CIRC};stroke-dashoffset:${S_CIRC};transition:stroke-dashoffset ${S_DRAW_DUR*0.85}ms cubic-bezier(0.22,1,0.36,1) ${S_DRAW_START}ms}
+  .sp-circle.sp-drawing{stroke-dashoffset:0}
+  .sp-mpath{stroke-dasharray:${M_PATH_LEN};stroke-dashoffset:${M_PATH_LEN};transition:stroke-dashoffset ${S_DRAW_DUR}ms cubic-bezier(0.16,1,0.3,1) ${S_DRAW_START+150}ms}
+  .sp-mpath.sp-drawing{stroke-dashoffset:0}
+`;
+
+function SplashScreen({ onComplete }) {
+  const [phase,       setPhase]       = useState("hidden");
+  const [textVisible, setTextVisible] = useState(false);
+  const [tickerVis,   setTickerVis]   = useState(false);
+  const [exiting,     setExiting]     = useState(false);
+  const [mounted,     setMounted]     = useState(false);
+
+  useEffect(() => {
+    const t0 = setTimeout(() => setMounted(true),          30);
+    const t1 = setTimeout(() => setPhase("drawing"),       S_DRAW_START);
+    const t2 = setTimeout(() => setPhase("glowing"),       S_GLOW_START);
+    const t3 = setTimeout(() => setTextVisible(true),      S_TEXT_START);
+    const t4 = setTimeout(() => setTickerVis(true),        S_TAGLINE);
+    const t5 = setTimeout(() => setExiting(true),          S_HOLD);
+    const t6 = setTimeout(() => onComplete?.(),            S_HOLD + S_EXIT_DUR + 100);
+    return () => [t0,t1,t2,t3,t4,t5,t6].forEach(clearTimeout);
+  }, []);
+
+  const isDrawing = phase==="drawing"||phase==="glowing";
+  const isGlowing = phase==="glowing";
+  const C = SPLASH_COL;
+
+  return (
+    <div style={{
+      position:"fixed",inset:0,zIndex:9999,
+      display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      background:`radial-gradient(ellipse at 50% 40%, ${C.bgGrad1} 0%, ${C.bgGrad2} 100%)`,
+      overflow:"hidden",
+      fontFamily:"'JetBrains Mono','IBM Plex Mono','Courier New',monospace",
+      animation: exiting ? `spExit ${S_EXIT_DUR}ms cubic-bezier(0.4,0,1,1) forwards`
+                         : mounted ? "spFadeIn 500ms ease-out forwards" : "none",
+    }}>
+      <style>{SPLASH_CSS}</style>
+
+      {/* Grid */}
+      <div style={{position:"absolute",inset:0,pointerEvents:"none",animation:"spGridIn 1.2s ease-in forwards"}}>
+        <svg width="100%" height="100%" style={{position:"absolute",inset:0}} preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="spgf" cx="50%" cy="50%" r="60%">
+              <stop offset="0%"   stopColor={C.gridLine} stopOpacity="0"/>
+              <stop offset="70%"  stopColor={C.gridLine} stopOpacity="1"/>
+              <stop offset="100%" stopColor={C.gridLine} stopOpacity="1"/>
+            </radialGradient>
+          </defs>
+          {Array.from({length:18},(_,i)=>(<line key={`h${i}`} x1="0%" y1={`${(i/17)*100}%`} x2="100%" y2={`${(i/17)*100}%`} stroke={C.gridLine} strokeWidth="1" opacity="0.6"/>))}
+          {Array.from({length:28},(_,i)=>(<line key={`v${i}`} x1={`${(i/27)*100}%`} y1="0%" x2={`${(i/27)*100}%`} y2="100%" stroke={C.gridLine} strokeWidth="1" opacity="0.4"/>))}
+          <rect width="100%" height="100%" fill="url(#spgf)"/>
+        </svg>
+      </div>
+
+      {/* Particles */}
+      {SPLASH_PX.map(p=>(
+        <div key={p.id} style={{
+          position:"absolute",left:p.left,top:p.top,
+          width:p.size,height:p.size,borderRadius:"50%",
+          background:p.color,boxShadow:`0 0 ${p.size*4}px ${p.color}`,
+          animation:`spParticle ${p.dur} ease-in-out ${p.delay} infinite`,
+        }}/>
+      ))}
+
+      {/* Central glow */}
+      <div style={{
+        position:"absolute",width:480,height:480,borderRadius:"50%",
+        background:`radial-gradient(circle,${C.accentCyan}0a 0%,${C.accentIndigo}06 35%,transparent 65%)`,
+        filter:"blur(30px)",pointerEvents:"none",
+        opacity:isGlowing?0.7:0.2,transition:"opacity 0.8s ease",
+        animation:isGlowing?"spGlowPulse 3s ease-in-out infinite":"none",
+      }}/>
+
+      {/* Logo */}
+      <div style={{position:"relative",zIndex:2,animation:"spLogoIn 500ms ease-out 50ms both"}}>
+        {/* Halo */}
+        <div style={{
+          position:"absolute",inset:-30,borderRadius:"50%",
+          background:`radial-gradient(circle,${C.accentCyan}22 0%,transparent 65%)`,
+          filter:"blur(18px)",
+          opacity:isGlowing?0.8:0,transition:"opacity 0.8s ease",
+          animation:isGlowing?"spHalo 2s ease-in-out infinite":"none",
+        }}/>
+        <svg viewBox="0 0 120 120" width="160" height="160" style={{position:"relative",zIndex:2,overflow:"visible"}}>
+          <defs>
+            <filter id="spng" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2.5" result="b1"/>
+              <feGaussianBlur stdDeviation="5"   result="b2"/>
+              <feGaussianBlur stdDeviation="10"  result="b3"/>
+              <feMerge><feMergeNode in="b3"/><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="spmg" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="1.8" result="b1"/>
+              <feGaussianBlur stdDeviation="4"   result="b2"/>
+              <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <linearGradient id="spcg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stopColor={C.accentCyan}   stopOpacity="0.9"/>
+              <stop offset="40%"  stopColor={C.glowCore}     stopOpacity="1"/>
+              <stop offset="70%"  stopColor={C.glowMid}      stopOpacity="0.95"/>
+              <stop offset="100%" stopColor={C.accentIndigo} stopOpacity="0.9"/>
+            </linearGradient>
+            <linearGradient id="spmg2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor={C.accentCyan} stopOpacity="0.85"/>
+              <stop offset="50%"  stopColor={C.glowCore}   stopOpacity="1"/>
+              <stop offset="100%" stopColor={C.accentCyan} stopOpacity="0.85"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r={S_CIRCLE_R} fill="none"
+            stroke={isGlowing?"url(#spcg)":C.stroke}
+            strokeWidth={isGlowing?2.2:1.8} strokeLinecap="round"
+            filter={isGlowing?"url(#spng)":undefined}
+            className={`sp-circle${isDrawing?" sp-drawing":""}`}/>
+          <path d={LOGO_M_PATH} fill="none"
+            stroke={isGlowing?"url(#spmg2)":C.stroke}
+            strokeWidth={isGlowing?3.5:2.8}
+            strokeLinecap="round" strokeLinejoin="round"
+            filter={isGlowing?"url(#spmg)":undefined}
+            className={`sp-mpath${isDrawing?" sp-drawing":""}`}/>
+          {isGlowing && [
+            {x1:10,y1:22,x2:10,y2:14,x3:10,y3:14,x4:18,y4:14},
+            {x1:110,y1:22,x2:110,y2:14,x3:110,y3:14,x4:102,y4:14},
+            {x1:10,y1:98,x2:10,y2:106,x3:10,y3:106,x4:18,y4:106},
+            {x1:110,y1:98,x2:110,y2:106,x3:110,y3:106,x4:102,y4:106},
+          ].map((t,i)=>(
+            <g key={i} style={{opacity:0,animation:`spFadeUp 0.3s ease ${i*60}ms both`}}>
+              <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={C.accentCyan} strokeWidth="1" strokeLinecap="round"/>
+              <line x1={t.x3} y1={t.y3} x2={t.x4} y2={t.y4} stroke={C.accentCyan} strokeWidth="1" strokeLinecap="round"/>
+            </g>
+          ))}
+        </svg>
+        {isGlowing && (
+          <div style={{
+            position:"absolute",top:"50%",left:"50%",width:6,height:6,borderRadius:"50%",
+            background:C.glowCore,boxShadow:`0 0 12px ${C.glowCore},0 0 24px ${C.accentCyan}`,
+            zIndex:3,animation:"spCentre 0.6s ease-out 100ms both",
+          }}/>
+        )}
+      </div>
+
+      {/* Wordmark */}
+      <div style={{marginTop:28,zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+        <div style={{fontSize:28,fontWeight:900,color:C.text,lineHeight:1,display:"flex",alignItems:"baseline",gap:0}}>
+          {textVisible && (<>
+            {"MARKET".split("").map((ch,i)=>(
+              <span key={i} style={{display:"inline-block",letterSpacing:"0.22em",opacity:0,
+                animation:`spLetterIn 0.55s cubic-bezier(0.22,1,0.36,1) ${i*45}ms both`}}>{ch}</span>
+            ))}
+            <span style={{color:C.accentCyan,marginLeft:"0.22em",marginRight:"0.04em",opacity:0,
+              animation:"spFadeUp 0.3s ease 420ms both"}}>·</span>
+            {"MIND".split("").map((ch,i)=>(
+              <span key={i} style={{display:"inline-block",letterSpacing:"0.22em",opacity:0,
+                animation:`spLetterIn 0.55s cubic-bezier(0.22,1,0.36,1) ${300+i*45}ms both`}}>{ch}</span>
+            ))}
+          </>)}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10,width:"100%",
+          opacity:textVisible?1:0,transition:"opacity 0.5s ease 600ms"}}>
+          <div style={{flex:1,height:1,background:`linear-gradient(90deg,transparent,${C.accentCyan}66)`}}/>
+          <span style={{fontSize:8.5,fontWeight:700,letterSpacing:"0.32em",color:C.accentCyan}}>AI</span>
+          <div style={{flex:1,height:1,background:`linear-gradient(90deg,${C.accentCyan}66,transparent)`}}/>
+        </div>
+        <p style={{fontSize:9,fontWeight:500,letterSpacing:"0.28em",color:C.sub,
+          textTransform:"uppercase",margin:"2px 0 0 0",opacity:0,
+          animation:tickerVis?"spFadeUp 0.6s ease forwards":"none"}}>
+          Professional Trading Terminal
+        </p>
+        <div style={{marginTop:4,padding:"3px 12px",borderRadius:20,
+          border:`1px solid ${C.accentCyan}30`,background:`${C.accentCyan}08`,
+          fontSize:7.5,fontWeight:700,letterSpacing:"0.18em",
+          color:`${C.accentCyan}bb`,textTransform:"uppercase",opacity:0,
+          animation:tickerVis?"spFadeUp 0.4s ease 200ms both":"none"}}>
+          v8.0 · NSE · BSE · LIVE
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      {textVisible && (
+        <div style={{position:"absolute",bottom:72,left:"50%",transform:"translateX(-50%)",
+          width:220,height:2,background:`${C.accentCyan}18`,borderRadius:2,overflow:"hidden",zIndex:3,
+          animation:"spFadeUp 0.4s ease forwards"}}>
+          <div style={{height:"100%",
+            background:`linear-gradient(90deg,${C.accentCyan},${C.glowCore},${C.accentIndigo})`,
+            borderRadius:2,boxShadow:`0 0 8px ${C.accentCyan}`,
+            animation:`spBarFill ${S_HOLD-S_TEXT_START-300}ms linear forwards`}}/>
+        </div>
+      )}
+
+      {/* Ticker */}
+      <div style={{position:"absolute",bottom:32,left:0,right:0,overflow:"hidden",height:22,
+        borderTop:`1px solid ${C.accentCyan}18`,borderBottom:`1px solid ${C.accentCyan}18`,
+        background:`linear-gradient(90deg,${C.bg},transparent 8%,transparent 92%,${C.bg})`,
+        opacity:tickerVis?1:0,transition:"opacity 0.6s ease"}}>
+        <div style={{display:"flex",alignItems:"center",whiteSpace:"nowrap",
+          fontSize:9,color:C.sub,fontWeight:500,letterSpacing:"0.06em",height:"100%",
+          animation:"spTicker 28s linear infinite"}}>
+          {[...SPLASH_TICKER_DATA,...SPLASH_TICKER_DATA].map((item,i)=>(
+            <span key={i} style={{padding:"0 28px"}}>
+              <span style={{color:item.includes("−")?"#ef4444":item.includes("+")?"#10b981":C.sub}}>{item}</span>
+              <span style={{color:C.accentCyan,opacity:0.3,marginLeft:24}}>·</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Corner brackets */}
+      {[
+        {top:20,left:20,   borderTop:`1px solid ${C.accentCyan}44`,borderLeft:`1px solid ${C.accentCyan}44`,   animationDelay:"200ms"},
+        {top:20,right:20,  borderTop:`1px solid ${C.accentCyan}44`,borderRight:`1px solid ${C.accentCyan}44`,  animationDelay:"280ms"},
+        {bottom:20,left:20, borderBottom:`1px solid ${C.accentCyan}44`,borderLeft:`1px solid ${C.accentCyan}44`, animationDelay:"360ms"},
+        {bottom:20,right:20,borderBottom:`1px solid ${C.accentCyan}44`,borderRight:`1px solid ${C.accentCyan}44`,animationDelay:"440ms"},
+      ].map((s,i)=>{
+        const {animationDelay,...rest} = s;
+        return (
+          <div key={i} style={{position:"absolute",width:20,height:20,...rest,
+            opacity:0,animation:`spCorner 0.4s ease ${animationDelay} both`}}/>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function App(){
+  const[isDark,     setIsDark]    = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const[navTab,    setNavTab]    = useState("dashboard");
   const[sym,       setSym]       = useState("RELIANCE");
   const[tickers,   setTickers]   = useState(()=>genTickers(null));
@@ -1358,6 +1667,7 @@ export default function App(){
   // ── Upstox Option Chain state ────────────────────────────────────────────────
   const[ocExpiry,  setOcExpiry]  = useState("27 Jun 2024");
   const[ocGreeks,  setOcGreeks]  = useState(true);
+  const[ocTab,     setOcTab]     = useState("chain");       // "chain"|"builder"
   // ── Angel One Advisory state ─────────────────────────────────────────────────
   const[advisorTab,setAdvisorTab]= useState("ideas");      // "ideas"|"sectors"
   // ── StockEdge Screener state ──────────────────────────────────────────────────
@@ -1372,6 +1682,12 @@ export default function App(){
     alerts:priceAlerts, toasts:alertToasts, notifPerm,
     addAlert, deleteAlert, toggleAlert, clearAll:clearAlerts, requestPermission,
   } = usePriceAlerts(tickers);
+  // ── Theme sync ───────────────────────────────────────────────────────────────
+  T  = isDark ? DARK_T  : LIGHT_T;
+  TV = isDark ? TV_DARK : TV_LIGHT;
+
+  const toggleTheme = () => setIsDark(d => !d);
+
   const stock  =STOCKS[sym];
   const selTick=tickers.find(t=>t.sym===sym);
 
@@ -1446,10 +1762,16 @@ export default function App(){
     {id:"community",  Icon:Users,           label:"Community",    badge:"NEW"},
   ];
 
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
+
   return(
+    <ThemeContext.Provider value={{isDark, toggleTheme}}>
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,
       fontFamily:"'JetBrains Mono','IBM Plex Mono','Courier New',monospace",
-      display:"flex",flexDirection:"column",fontSize:12}}>
+      display:"flex",flexDirection:"column",fontSize:12,
+      transition:"background 0.3s ease, color 0.3s ease"}}>
 
       <TickerTape tickers={tickers}/>
 
@@ -1512,6 +1834,58 @@ export default function App(){
             LIVE
           </div>
           <PriceAlertSystem tickers={tickers} defaultSym={sym} compact={true}/>
+          {/* ── THEME TOGGLE ── */}
+          <button
+            onClick={toggleTheme}
+            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            style={{
+              background: isDark ? "rgba(241,245,249,0.08)" : "rgba(15,23,42,0.07)",
+              border: `1px solid ${isDark ? "rgba(241,245,249,0.15)" : "rgba(15,23,42,0.15)"}`,
+              borderRadius: 20, padding: "5px 11px",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
+              position: "relative", overflow: "hidden",
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.background=isDark?"rgba(241,245,249,0.14)":"rgba(15,23,42,0.12)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background=isDark?"rgba(241,245,249,0.08)":"rgba(15,23,42,0.07)";}}
+          >
+            {/* Track */}
+            <div style={{
+              width: 32, height: 16, borderRadius: 8, position: "relative",
+              background: isDark
+                ? "linear-gradient(135deg,#1e3a5f,#0f172a)"
+                : "linear-gradient(135deg,#fde68a,#fbbf24)",
+              border: `1px solid ${isDark?"#334155":"#f59e0b"}`,
+              transition: "background 0.3s ease",
+              flexShrink: 0,
+            }}>
+              <div style={{
+                position: "absolute", top: 2,
+                left: isDark ? 2 : 16,
+                width: 10, height: 10, borderRadius: "50%",
+                background: isDark ? "#94a3b8" : "#ffffff",
+                boxShadow: isDark ? "none" : "0 0 6px #fbbf2499",
+                transition: "left 0.25s cubic-bezier(0.4,0,0.2,1), background 0.25s",
+              }}/>
+            </div>
+            {/* Icon */}
+            <span style={{
+              fontSize: 12,
+              filter: isDark ? "grayscale(0.3)" : "none",
+              transition: "all 0.3s",
+              lineHeight: 1,
+            }}>
+              {isDark ? "🌙" : "☀️"}
+            </span>
+            <span style={{
+              fontSize: 8, fontWeight: 800,
+              color: isDark ? "#94a3b8" : "#92400e",
+              letterSpacing: "0.06em",
+              fontFamily:"inherit",
+            }}>
+              {isDark ? "DARK" : "LIGHT"}
+            </span>
+          </button>
           <Settings size={15} color={T.muted} style={{cursor:"pointer"}}/>
         </div>
       </header>
@@ -1819,7 +2193,7 @@ export default function App(){
                         </span>}
                     </div>
                   </div>
-                  <ShadowChart candles={candles} shadow={shadow}/>
+                  <ShadowChart candles={candles} shadow={shadow} isDark={isDark}/>
                   {/* Order-from-Chart UI (Zerodha Kite Inspired) */}
                   <div style={{display:"flex",gap:6,padding:"8px 10px",
                     borderTop:`1px solid ${TV.border}`,background:TV.bg,
@@ -2462,6 +2836,27 @@ export default function App(){
                 </div>
               </div>
 
+              {/* ── Sub-Tab Switcher: Option Chain | Strategy Builder ── */}
+              <div style={{display:"flex",gap:6,background:T.panel,border:`1px solid ${T.border}`,borderRadius:10,padding:4,alignSelf:"flex-start"}}>
+                {[
+                  {id:"chain",   label:"🔗 Option Chain"},
+                  {id:"builder", label:"🧩 Strategy Builder"},
+                ].map(tab=>(
+                  <button key={tab.id} onClick={()=>setOcTab(tab.id)} style={{
+                    padding:"7px 16px",borderRadius:7,fontSize:9,fontWeight:800,cursor:"pointer",
+                    fontFamily:"inherit",transition:"all 0.15s",
+                    background:ocTab===tab.id?`linear-gradient(135deg,${T.violet},${T.indigo})`:"transparent",
+                    color:ocTab===tab.id?"#fff":T.muted,border:"none",
+                    boxShadow:ocTab===tab.id?`0 4px 14px ${T.violet}44`:"none",
+                  }}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {ocTab==="chain"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+
               {/* IV Summary Strip */}
               <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
                 {[
@@ -2560,6 +2955,15 @@ export default function App(){
                       <span style={{color:T.muted}}>— {g.d}</span>
                     </span>
                   ))}
+                </div>
+              )}
+              </div>
+              )}
+
+              {/* ── Strategy Builder sub-tab ── */}
+              {ocTab==="builder"&&(
+                <div style={{borderRadius:14,overflow:"hidden",border:`1px solid ${T.violet}33`}}>
+                  <StrategyBuilder/>
                 </div>
               )}
             </div>
@@ -3230,12 +3634,13 @@ export default function App(){
         @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(16,185,129,0.4)}50%{opacity:0.5;box-shadow:0 0 0 5px rgba(16,185,129,0)}}
         @keyframes fadeIn{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:translateY(0)}}
         @keyframes growwPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,208,156,0.35)}50%{opacity:0.7;box-shadow:0 0 0 6px rgba(0,208,156,0)}}
-        *{box-sizing:border-box;}
+        *{box-sizing:border-box;transition:background-color 0.25s ease,border-color 0.25s ease,color 0.2s ease;}
         ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:${T.bg}}
         ::-webkit-scrollbar-thumb{background:${T.border2};border-radius:4px}
         ::-webkit-scrollbar-thumb:hover{background:${G.growwGreen}55}
       `}</style>
     </div>
+    </ThemeContext.Provider>
   );
 }
